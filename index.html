@@ -147,7 +147,7 @@
 <header>
   <div class="top">
     <span class="logo"></span>
-    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v21　<span id="sync">已同步</span></small></div>
+    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v22　<span id="sync">已同步</span></small></div>
     <button id="tab2" data-tab="2">設定</button>
   </div>
   <div class="seg">
@@ -303,17 +303,21 @@ async function request(action,args,ov){
   return j.data;
 }
 
-var lastErr='', ver=0, flushing=false, failCount=0, retryTimer=null, dropped=false;
+var lastLoadOk=0, loadErr='', lastErr='', ver=0, flushing=false, failCount=0, retryTimer=null, dropped=false;
 var outbox=[];
 try{outbox=JSON.parse(lsGet('mj_outbox')||'[]');}catch(e){outbox=[];}
 function saveOutbox(){lsSet('mj_outbox',JSON.stringify(outbox));}
 function syncBanner(msg){
   var b=document.getElementById('errbar');if(!b)return;
-  if(msg){b.style.display='block';b.textContent='⚠ 無法上傳：'+msg+'（點此開啟連線設定）';b.setAttribute('data-k','sync');}
+  if(msg){b.style.display='block';b.textContent='⚠ '+msg+'（點此開啟連線設定）';b.setAttribute('data-k','sync');}
   else if(b.getAttribute('data-k')==='sync'){b.style.display='none';b.removeAttribute('data-k');}
 }
 function updateSync(){
   var t='已同步';
+  if(!outbox.length){
+    if(loadErr) t='讀取失敗（點我看原因）';
+    else if(lastLoadOk){var dt=new Date(lastLoadOk);t='已同步 '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2)+'（點我重新讀取）';}
+  }
   if(flushing&&outbox.length) t='同步中…';
   else if(outbox.length) t=(navigator.onLine===false?'離線・':'')+'待上傳 '+outbox.length+' 筆（點我看原因）';
   setText('sync',t);
@@ -344,7 +348,7 @@ async function flush(){
         if(e.type==='net'){
           lastErr=e.message+(e.detail?'｜回應內容：'+e.detail:'');
           failCount++;
-          if(failCount>=2)syncBanner(lastErr);
+          if(failCount>=2)syncBanner('無法上傳：'+lastErr);
           if(failCount===2) toast('連線失敗，點標題下方的「待上傳」可看原因');
           clearTimeout(retryTimer); retryTimer=setTimeout(flush,8000);
           return;
@@ -366,23 +370,39 @@ function fetchState(apply){
   if(!apiUrl())return;
   var v=ver;
   request('getState',[]).then(function(st){
+    lastLoadOk=Date.now(); loadErr=''; syncBanner(''); updateSync();
     if(outbox.length||flushing||v!==ver)return; // 期間有本機操作，這份資料已過期
     apply(st);
   }).catch(function(e){
-    if(e&&e.type==='auth')showLock('密碼不正確，請重新輸入');
+    if(e&&e.type==='auth'){showLock('密碼不正確，請重新輸入');return;}
+    loadErr=(e&&e.message)||'未知錯誤';
+    syncBanner('讀取不到試算表資料：'+loadErr);
+    updateSync();
   });
+}
+async function manualRefresh(){
+  toast('讀取中…');
+  try{
+    var st=await request('getState',[]);
+    lastLoadOk=Date.now(); loadErr=''; syncBanner('');
+    if(!outbox.length){S=st;fillSettings();renderAll();}
+    toast('已更新：目前戰況 '+st.records.length+' 把、歷史 '+st.history.length+' 場');
+  }catch(e){
+    if(e&&e.type==='auth'){showLock('密碼不正確，請重新輸入');}
+    else{loadErr=(e&&e.message)||'未知錯誤';syncBanner('讀取不到試算表資料：'+loadErr);toast('讀取失敗，請看上方警告');}
+  }
+  updateSync();
 }
 function reload(){fetchState(function(st){S=st;fillSettings();renderAll();});}
 setInterval(function(){
   if(document.hidden)return;
   fetchState(function(st){
     if(JSON.stringify(st)===JSON.stringify(S))return;
-    S=st;
     var ae=document.activeElement;
-    if(ae&&ae.tagName==='INPUT')return; // 正在輸入時先不重畫
-    fillSettings();renderAll();
+    if(ae&&ae.tagName==='INPUT'&&ae.type==='text')return; // 正在輸入文字時先不重畫，下一輪再更新
+    S=st; fillSettings();renderAll();
   });
-},20000);
+},15000);
 
 /* ---------- 連線設定視窗 ---------- */
 function showLock(msg,ok){
@@ -664,9 +684,11 @@ function saveEdit(){
 
 /* ---------- 事件（全部集中在這裡） ---------- */
 document.addEventListener('click',function(e){
-  if(e.target&&e.target.id==='errbar'&&e.target.getAttribute('data-k')==='sync'){showLock(lastErr);return;}
+  if(e.target&&e.target.id==='errbar'&&e.target.getAttribute('data-k')==='sync'){showLock(lastErr||loadErr);return;}
   if(e.target&&e.target.id==='sync'){
     if(outbox.length){failCount=0;flush();showLock(lastErr?('上次失敗原因：'+lastErr):'正在重試上傳…');}
+    else if(loadErr){showLock('讀取失敗原因：'+loadErr);}
+    else{manualRefresh();}
     return;
   }
   var el=e.target.closest?e.target.closest('button'):null;
@@ -736,6 +758,7 @@ if(!apiUrl()){
 }
 window.addEventListener('online',function(){failCount=0;flush();reload();});
 window.addEventListener('offline',updateSync);
+window.addEventListener('focus',function(){flush();reload();});
 document.addEventListener('visibilitychange',function(){if(!document.hidden){flush();reload();}});
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
