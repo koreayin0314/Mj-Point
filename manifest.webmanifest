@@ -1,6 +1,6 @@
 {
-  "name": "東方神秘力量結算中心",
-  "short_name": "結算中心",
+  "name": "東方神秘櫃台",
+  "short_name": "東方神秘櫃台",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
