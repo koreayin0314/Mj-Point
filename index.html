@@ -25,6 +25,7 @@
   .logo::before{content:"\1F004";font-size:30px}
   .ttlbox{flex:1;min-width:0}
   header h1{margin:0;font-size:19px;font-weight:800;white-space:nowrap}
+  header small #sync{text-decoration:underline dotted}
   header small{font-size:11px;opacity:.8}
   #tab2{border:none;border-radius:14px;padding:9px 14px;font-size:16px;font-weight:800;color:#7a2a00;background:linear-gradient(#fcd34d,#f59e0b);box-shadow:0 2px 4px rgba(0,0,0,.25)}
   #tab2::before{content:"\2699\FE0F "}
@@ -146,7 +147,7 @@
 <header>
   <div class="top">
     <span class="logo"></span>
-    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v17　<span id="sync">已同步</span></small></div>
+    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v20　<span id="sync">已同步</span></small></div>
     <button id="tab2" data-tab="2">設定</button>
   </div>
   <div class="seg">
@@ -163,6 +164,7 @@
   <input id="lockUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="off" autocorrect="off">
   <div class="lbl">家庭密碼（沒設定就留空）</div>
   <input id="lockKey" type="password" autocapitalize="off">
+  <button class="btn" id="lockTest" style="width:100%;margin-top:12px;font-size:15px;padding:10px">測試連線</button>
   <div class="foot"><button class="btn" id="lockCancel">取消</button><button class="btn on" id="lockOk">連線</button></div>
 </div></div>
 <div id="editModal"><div class="box"><div id="editBody"></div>
@@ -274,22 +276,22 @@ function apiUrl(){return lsGet('mj_url')||CFG.API_URL||'';}
 function apiKey(){return lsGet('mj_key')||'';}
 
 // 對 Apps Script 發出請求。錯誤分類：config 沒設網址／auth 密碼錯／net 連不上或回應異常／server 伺服器程式出錯
-async function request(action,args){
-  var url=apiUrl();
+async function request(action,args,ov){
+  var url=ov?ov.url:apiUrl();
   if(!url) throw {type:'config',message:'尚未設定網址'};
   var ctrl=new AbortController();
   var to=setTimeout(function(){ctrl.abort();},30000);
   var text;
   try{
     var res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({key:apiKey(),action:action,args:args||[]}),signal:ctrl.signal});
+      body:JSON.stringify({key:ov?ov.key:apiKey(),action:action,args:args||[]}),signal:ctrl.signal});
     text=await res.text();
   }catch(e){
-    throw {type:'net',message:'連不上伺服器'};
+    throw {type:'net',message:'連不上伺服器（'+(e&&e.message?e.message:'未知')+'）'};
   }finally{clearTimeout(to);}
   var j;
   try{j=JSON.parse(text);}catch(e){
-    throw {type:'net',message:'伺服器回應異常，請確認 Apps Script 已部署為「所有人」可存取'};
+    throw {type:'net',message:'伺服器回應不是資料格式',detail:String(text).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,70)};
   }
   if(!j.ok){
     throw {type:(j.code==='auth'?'auth':'server'),message:j.error||'伺服器錯誤'};
@@ -297,14 +299,14 @@ async function request(action,args){
   return j.data;
 }
 
-var ver=0, flushing=false, failCount=0, retryTimer=null, dropped=false;
+var lastErr='', ver=0, flushing=false, failCount=0, retryTimer=null, dropped=false;
 var outbox=[];
 try{outbox=JSON.parse(lsGet('mj_outbox')||'[]');}catch(e){outbox=[];}
 function saveOutbox(){lsSet('mj_outbox',JSON.stringify(outbox));}
 function updateSync(){
   var t='已同步';
   if(flushing&&outbox.length) t='同步中…';
-  else if(outbox.length) t=(navigator.onLine===false?'離線・':'')+'待上傳 '+outbox.length+' 筆';
+  else if(outbox.length) t=(navigator.onLine===false?'離線・':'')+'待上傳 '+outbox.length+' 筆（點我看原因）';
   setText('sync',t);
 }
 function persist(){lsSet('mj_state',JSON.stringify(S));}
@@ -328,11 +330,12 @@ async function flush(){
       var op=outbox[0];
       try{
         await request(op.fn,op.args);
-        outbox.shift(); saveOutbox(); failCount=0; updateSync();
+        outbox.shift(); saveOutbox(); failCount=0; lastErr=''; updateSync();
       }catch(e){
         if(e.type==='net'){
+          lastErr=e.message+(e.detail?'｜回應內容：'+e.detail:'');
           failCount++;
-          if(failCount===2) toast(e.message+'。資料先存在手機，連線後會自動上傳');
+          if(failCount===2) toast('連線失敗，點標題下方的「待上傳」可看原因');
           clearTimeout(retryTimer); retryTimer=setTimeout(flush,8000);
           return;
         }
@@ -372,11 +375,27 @@ setInterval(function(){
 },20000);
 
 /* ---------- 連線設定視窗 ---------- */
-function showLock(msg){
+function showLock(msg,ok){
   $('lockUrl').value=apiUrl();
   $('lockKey').value=apiKey();
   setText('lockMsg',msg||'');
+  $('lockMsg').style.color=ok?'#2e7d32':'#b71c1c';
   $('lock').style.display='flex';
+}
+async function lockTest(){
+  var u=$('lockUrl').value.trim(), k=$('lockKey').value;
+  var m=$('lockMsg'); m.style.color='#555'; m.textContent='測試中…（第一次可能要等 10 秒）';
+  try{
+    var st=await request('getState',[],{url:u,key:k});
+    m.style.color='#2e7d32';
+    m.textContent='連線成功！目前戰況 '+st.records.length+' 把、歷史 '+st.history.length+' 場';
+  }catch(e){
+    m.style.color='#b71c1c';
+    var t=e.message||'失敗';
+    if(e.detail)t+='｜回應內容：'+e.detail;
+    if(e.type==='net')t+='。請確認：①網址結尾是 /exec ②部署時「誰可以存取」選「所有人」③改過程式後有部署「新版本」';
+    m.textContent=t;
+  }
 }
 function lockOk(){
   var u=$('lockUrl').value.trim(), k=$('lockKey').value;
@@ -635,6 +654,10 @@ function saveEdit(){
 
 /* ---------- 事件（全部集中在這裡） ---------- */
 document.addEventListener('click',function(e){
+  if(e.target&&e.target.id==='sync'){
+    if(outbox.length){failCount=0;flush();showLock(lastErr?('上次失敗原因：'+lastErr):'正在重試上傳…');}
+    return;
+  }
   var el=e.target.closest?e.target.closest('button'):null;
   if(!el)return;
   if(el.id==='modalYes'||el.id==='modalNo'){
@@ -647,6 +670,7 @@ document.addEventListener('click',function(e){
   if(el.id==='connBtn'){showLock('');return;}
   if(el.id==='lockCancel'){$('lock').style.display='none';return;}
   if(el.id==='lockOk'){lockOk();return;}
+  if(el.id==='lockTest'){lockTest();return;}
   if(el.id==='editCancel'){$('editModal').style.display='none';E=null;return;}
   if(el.id==='editSave'){saveEdit();return;}
   if(E&&d.ewin!==undefined){E.winner=parseInt(d.ewin,10);if(E.loser===E.winner)E.loser=null;renderEdit();return;}
