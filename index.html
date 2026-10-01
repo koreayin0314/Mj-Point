@@ -147,7 +147,7 @@
 <header>
   <div class="top">
     <span class="logo"></span>
-    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v20　<span id="sync">已同步</span></small></div>
+    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v21　<span id="sync">已同步</span></small></div>
     <button id="tab2" data-tab="2">設定</button>
   </div>
   <div class="seg">
@@ -287,11 +287,15 @@ async function request(action,args,ov){
       body:JSON.stringify({key:ov?ov.key:apiKey(),action:action,args:args||[]}),signal:ctrl.signal});
     text=await res.text();
   }catch(e){
-    throw {type:'net',message:'連不上伺服器（'+(e&&e.message?e.message:'未知')+'）'};
+    throw {type:'net',message:'連不上伺服器（'+(e&&e.message?e.message:'未知')+'）。可能是沒網路，或 Apps Script 部署權限不是「所有人」'};
   }finally{clearTimeout(to);}
   var j;
   try{j=JSON.parse(text);}catch(e){
-    throw {type:'net',message:'伺服器回應不是資料格式',detail:String(text).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,70)};
+    var det=String(text).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,70), hint='';
+    if(/doPost|指令碼函式|Script function/i.test(det))hint='Apps Script 還是舊版程式，請「部署 → 管理部署作業 → 編輯 → 新版本 → 部署」';
+    else if(/登入|Sign in|accounts\.google|Google 帳戶|Google Account/i.test(det))hint='存取權限不對，部署時「誰可以存取」要選「所有人」';
+    else if(/找不到|unable to open|Sorry/i.test(det))hint='網址可能貼錯或部署已被刪除，請重新複製 /exec 網址';
+    throw {type:'net',message:'伺服器回應不是資料格式'+(hint?'：'+hint:''),detail:det};
   }
   if(!j.ok){
     throw {type:(j.code==='auth'?'auth':'server'),message:j.error||'伺服器錯誤'};
@@ -303,6 +307,11 @@ var lastErr='', ver=0, flushing=false, failCount=0, retryTimer=null, dropped=fal
 var outbox=[];
 try{outbox=JSON.parse(lsGet('mj_outbox')||'[]');}catch(e){outbox=[];}
 function saveOutbox(){lsSet('mj_outbox',JSON.stringify(outbox));}
+function syncBanner(msg){
+  var b=document.getElementById('errbar');if(!b)return;
+  if(msg){b.style.display='block';b.textContent='⚠ 無法上傳：'+msg+'（點此開啟連線設定）';b.setAttribute('data-k','sync');}
+  else if(b.getAttribute('data-k')==='sync'){b.style.display='none';b.removeAttribute('data-k');}
+}
 function updateSync(){
   var t='已同步';
   if(flushing&&outbox.length) t='同步中…';
@@ -330,11 +339,12 @@ async function flush(){
       var op=outbox[0];
       try{
         await request(op.fn,op.args);
-        outbox.shift(); saveOutbox(); failCount=0; lastErr=''; updateSync();
+        outbox.shift(); saveOutbox(); failCount=0; lastErr=''; syncBanner(''); updateSync();
       }catch(e){
         if(e.type==='net'){
           lastErr=e.message+(e.detail?'｜回應內容：'+e.detail:'');
           failCount++;
+          if(failCount>=2)syncBanner(lastErr);
           if(failCount===2) toast('連線失敗，點標題下方的「待上傳」可看原因');
           clearTimeout(retryTimer); retryTimer=setTimeout(flush,8000);
           return;
@@ -654,6 +664,7 @@ function saveEdit(){
 
 /* ---------- 事件（全部集中在這裡） ---------- */
 document.addEventListener('click',function(e){
+  if(e.target&&e.target.id==='errbar'&&e.target.getAttribute('data-k')==='sync'){showLock(lastErr);return;}
   if(e.target&&e.target.id==='sync'){
     if(outbox.length){failCount=0;flush();showLock(lastErr?('上次失敗原因：'+lastErr):'正在重試上傳…');}
     return;

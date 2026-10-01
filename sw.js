@@ -1,5 +1,5 @@
 // 離線快取：有網路時永遠抓最新版，沒網路時用上次存下來的畫面
-var CACHE = 'mj-v20';
+var CACHE = 'mj-v21';
 var ASSETS = ['./', 'index.html', 'config.js', 'manifest.webmanifest',
               'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
