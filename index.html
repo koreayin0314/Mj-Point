@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>東方神秘力量結算中心</title>
+<meta name="theme-color" content="#b71c1c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="結算中心">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="config.js"></script>
+<style>
+  :root{--red:#b71c1c;--red2:#d32f2f;--gold:#d4a017;--win:#d32f2f;--lose:#2e7d32;--line:#e3e6ea;--panel:#f6f7f9}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:#e9e9ee}
+  body{margin:0 auto;width:100%;max-width:430px;min-height:100vh;background:#fff;color:#333;font-family:"Microsoft JhengHei","PingFang TC",sans-serif;padding-bottom:calc(40px + env(safe-area-inset-bottom));box-shadow:0 0 12px rgba(0,0,0,.2)}
+  button{font-family:inherit}
+  /* 頂部 */
+  header{background:linear-gradient(135deg,#b71c1c,#dc2626 55%,#d97706);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 12px 12px}
+  .top{display:flex;align-items:center;gap:8px}
+  .logo::before{content:"\1F004";font-size:30px}
+  .ttlbox{flex:1;min-width:0}
+  header h1{margin:0;font-size:19px;font-weight:800;white-space:nowrap}
+  header small{font-size:11px;opacity:.8}
+  #tab2{border:none;border-radius:14px;padding:9px 14px;font-size:16px;font-weight:800;color:#7a2a00;background:linear-gradient(#fcd34d,#f59e0b);box-shadow:0 2px 4px rgba(0,0,0,.25)}
+  #tab2::before{content:"\2699\FE0F "}
+  #tab2.on{background:#fff;color:var(--red)}
+  .seg{display:flex;gap:5px;background:rgba(0,0,0,.25);border-radius:18px;padding:5px;margin-top:12px}
+  .seg button{flex:1;border:none;border-radius:14px;padding:12px 4px;font-size:17px;font-weight:800;background:transparent;color:rgba(255,255,255,.9)}
+  .seg button.on{background:#fff;color:var(--red);box-shadow:0 2px 5px rgba(0,0,0,.25)}
+  #tab0::before{content:"\2694\FE0F "}
+  #tab1::before{content:"\1F4DC "}
+  #errbar{display:none;background:#fff3cd;color:#7a0000;border:2px solid #d32f2f;padding:10px;font-size:14px;word-break:break-all}
+  .page{display:none;padding:12px}.page.on{display:block}
+  /* 卡片 */
+  .card{border:2px solid var(--gold);border-radius:14px;padding:12px;margin-bottom:14px;background:#fff}
+  .card h3{margin:0 0 10px;color:var(--red);font-size:17px}
+  .rate{float:right;font-size:14px;color:#8a6a00;font-weight:bold}
+  /* 戰況 */
+  .sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .sum .p{display:block !important;background:#fff;border:1.5px solid var(--gold);border-radius:10px;padding:8px 2px;text-align:center;min-width:0}
+  .sum .n{font-size:14px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sum .m{font-size:18px;font-weight:bold;margin-top:4px;white-space:nowrap}
+  .sum .p.champ{background:#fdeeee;border-color:#e0a3a3}
+  .pxl{margin:6px 3px 0;padding-top:5px;border-top:1px dashed var(--gold);font-size:12px;color:#777;white-space:nowrap}
+  .pxl b{font-size:13px}
+  .note{margin-top:8px;font-size:12px;color:#888;text-align:center}
+  .pos{color:var(--win)}.neg{color:var(--lose)}
+  /* 按鈕 */
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btns4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .btns3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .btn{padding:16px 6px;font-size:20px;font-weight:bold;border:2px solid var(--red);border-radius:12px;background:#fff;color:var(--red)}
+  .btns4 .btn,.btns3 .btn{padding:11px 2px;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn.on{background:var(--red);color:var(--gold);border-color:var(--red)}
+  .btn.big{width:100%;background:linear-gradient(135deg,var(--red2),var(--red));color:var(--gold);font-size:22px;padding:18px;border:2px solid var(--gold)}
+  .btn.big:disabled{opacity:.6}
+  #m_zimo,#m_gun{font-size:16px;padding:12px 6px}
+  #m_zimo::before{content:"\1F004 "}
+  #m_gun::before{content:"\1F3AF "}
+  .chkpill{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:7px 12px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:14px}
+  .chkpill input,.pk input{width:22px;height:22px;accent-color:var(--red)}
+  /* 贏牌方式 面板 */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}
+  .panel .ttl{font-weight:800;font-size:15px;margin-bottom:10px;color:#222}
+  .hintmsg{text-align:center;color:#888;padding:8px;font-size:15px}
+  .lrow{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+  .lrow .nm{font-weight:800;font-size:17px}
+  .pk{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:14px;color:#666}
+  label.taibox{display:flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 12px}
+  .taibox input{border:none;background:transparent;width:2.6em;font-size:20px;font-weight:800;color:var(--red);text-align:right;padding:0;outline:none;font-family:inherit}
+  .taibox .u{font-size:20px;font-weight:800;color:var(--red)}
+  .taibox .k{font-size:15px;color:#999;margin-left:4px}
+  .taibox .k::before{content:"\2328\FE0F"}
+  label.taibox.wide{background:#fff;padding:14px;margin-top:0}
+  .taibox.wide input{text-align:left;width:3em;color:#222}
+  .taibox.wide .u{color:#222}
+  .taibox .hint{margin-left:auto;background:#fdecec;color:var(--red);border-radius:10px;padding:6px 10px;font-size:14px;font-weight:bold}
+  .taibox .hint::after{content:" \2328\FE0F"}
+  /* 紀錄 */
+  .lh{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .lt{color:var(--red);font-size:17px;font-weight:800}
+  .lt::before{content:"\1F4DC "}
+  .cnt{font-size:14px;color:#777}
+  .log{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px}
+  .log .txt{flex:1;font-size:13px;line-height:1.55;min-width:0}
+  .log .w{color:var(--red);font-weight:800}
+  .log .l{font-weight:800;color:#c58b00}
+  .acts{flex:none;display:flex;flex-direction:column;gap:6px}
+  .acts button{width:38px;height:34px;padding:0;background:#fff;border:1.5px solid var(--line);border-radius:10px;font-size:15px;font-weight:bold;color:var(--red)}
+  .acts button.ed{color:#8a6a00}
+  #editModal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:97;display:none;align-items:center;justify-content:center}
+  #editModal .box{background:#fff;border:3px solid #d4a017;border-radius:14px;padding:14px;width:94%;max-width:400px;max-height:92vh;overflow-y:auto}
+  #editModal h4{margin:0 0 10px;color:var(--red);font-size:17px}
+  #editModal .sec{font-weight:800;font-size:14px;margin:12px 0 6px}
+  .lgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .lcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 4px 8px;text-align:center;min-width:0}
+  .lcard .nm{font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lcard label.taibox{justify-content:center;gap:2px;padding:7px 4px;margin-top:8px}
+  .lcard .taibox input{width:1.9em;text-align:center}
+  .lcard .pk{justify-content:center;margin-top:8px;padding-top:7px;border-top:1px dashed var(--gold)}
+  #editModal .box{padding:12px}
+  #editModal .btn{font-size:14px;padding:9px 2px}
+  #editModal .panel{padding:10px;margin-top:8px}
+  #editModal .panel .ttl,#editModal .sec{font-size:13px}
+  #editModal .chkpill{font-size:13px;padding:6px 10px;margin-top:8px}
+  #editModal .chkpill input,#editModal .pk input{width:18px;height:18px}
+  #editModal .pk{font-size:13px}
+  #editModal .lcard .nm{font-size:14px}
+  #editModal .taibox input{font-size:17px}
+  #editModal .taibox .u{font-size:16px}
+  #editModal label.taibox.wide{padding:10px}
+  #editModal .taibox .hint{font-size:12px;padding:4px 8px}
+  #editModal h4{font-size:15px;margin-bottom:6px}
+  #editModal .foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  #editModal .foot button{padding:12px;font-size:17px}
+  .tag{color:#000;font-size:12px;font-weight:900;margin-left:1px;line-height:0}
+  .endwrap{text-align:center;border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
+  .endpill{padding:12px 26px;font-size:17px;font-weight:800;border-radius:14px;border:1.5px solid #cbd5e1;background:var(--panel);color:#333}
+  .endpill::before{content:"\1F504 "}
+  .hist .d{font-weight:bold;color:var(--red);font-size:17px;margin-bottom:6px}
+  .empty{text-align:center;color:#aaa;padding:16px}
+  /* 設定頁輸入 */
+  .lbl{font-size:15px;color:#666;margin:8px 0 4px}
+  input.num,input.txt{width:100%;padding:12px;font-size:22px;border:2px solid var(--gold);border-radius:10px;text-align:center}
+  input.txt{font-size:18px}
+  #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:400px;width:88%;background:#b71c1c;color:#fff;border:2px solid #d4a017;border-radius:12px;padding:14px;font-size:17px;font-weight:bold;text-align:center;z-index:99;display:none}
+  #lock{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:120;display:none;align-items:center;justify-content:center}
+  #lock .box{background:#fff;border:3px solid #d4a017;border-radius:14px;padding:16px;width:92%;max-width:400px}
+  #lock h4{margin:0 0 8px;color:var(--red);font-size:18px}
+  #lockMsg{color:#b71c1c;font-size:14px;margin-bottom:4px}
+  #lock input{width:100%;padding:11px;font-size:15px;border:2px solid var(--gold);border-radius:10px;font-family:inherit}
+  #lock .foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  #lock .foot button{padding:12px;font-size:17px}
+  #modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:98;display:none;align-items:center;justify-content:center}
+  #modal .box{background:#fff;border:3px solid #d4a017;border-radius:14px;padding:18px;width:88%;max-width:380px;text-align:center}
+  #modal .msg{font-size:18px;margin-bottom:16px;white-space:pre-line}
+  #modal .btns button{padding:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <span class="logo"></span>
+    <div class="ttlbox"><h1>東方神秘力量結算中心</h1><small>v17　<span id="sync">已同步</span></small></div>
+    <button id="tab2" data-tab="2">設定</button>
+  </div>
+  <div class="seg">
+    <button id="tab0" class="on" data-tab="0">對戰時刻</button>
+    <button id="tab1" data-tab="1">歷史軌跡</button>
+  </div>
+</header>
+<div id="errbar"></div>
+<div id="toast"></div>
+<div id="lock"><div class="box">
+  <h4>連線設定</h4>
+  <div id="lockMsg"></div>
+  <div class="lbl">Apps Script 網址（結尾是 /exec）</div>
+  <input id="lockUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="off" autocorrect="off">
+  <div class="lbl">家庭密碼（沒設定就留空）</div>
+  <input id="lockKey" type="password" autocapitalize="off">
+  <div class="foot"><button class="btn" id="lockCancel">取消</button><button class="btn on" id="lockOk">連線</button></div>
+</div></div>
+<div id="editModal"><div class="box"><div id="editBody"></div>
+  <div class="foot"><button class="btn" id="editCancel">取消</button><button class="btn on" id="editSave">儲存修改</button></div></div></div>
+<div id="modal"><div class="box"><div class="msg" id="modalMsg"></div><div class="btns"><button class="btn" id="modalNo">取消</button><button class="btn on" id="modalYes">確定</button></div></div></div>
+
+<div id="page0" class="page on">
+  <div class="card">
+    <h3>即時戰況<span class="rate" id="rate"></span></h3>
+    <div class="sum" id="sum"></div>
+  </div>
+
+  <div class="card">
+    <h3>① 誰贏了？</h3>
+    <div class="btns4" id="winBtns"></div>
+    <label class="chkpill"><input type="checkbox" id="winProxy"> 贏家是「代打」</label>
+  </div>
+
+  <div class="card">
+    <h3>② 贏牌方式</h3>
+    <div class="btns">
+      <button class="btn" id="m_zimo" data-method="zimo">自摸</button>
+      <button class="btn" id="m_gun" data-method="gun">放槍</button>
+    </div>
+    <div class="panel" id="detail" style="display:none"></div>
+  </div>
+
+  <button class="btn big" id="submitBtn" style="margin-bottom:14px">確定</button>
+
+  <div class="card">
+    <div class="lh"><span class="lt">當前戰況</span><span class="cnt" id="logCnt"></span></div>
+    <div id="logs"></div>
+    <div class="endwrap"><button class="endpill" id="endBtn">此戰結束 重新開局</button></div>
+  </div>
+</div>
+
+<div id="page1" class="page">
+  <div id="hist"></div>
+</div>
+
+<div id="page2" class="page">
+  <div class="card">
+    <h3>玩家與金額設定</h3>
+    <div class="lbl">玩家名字</div>
+    <div class="btns">
+      <input class="txt" id="n0"><input class="txt" id="n1">
+      <input class="txt" id="n2"><input class="txt" id="n3">
+    </div>
+    <div class="btns" style="margin-top:8px">
+      <div><div class="lbl">底 (元)</div><input class="num" id="base" type="text" inputmode="numeric"></div>
+      <div><div class="lbl">每台 (元)</div><input class="num" id="taiv" type="text" inputmode="numeric"></div>
+    </div>
+    <button class="btn big" id="saveBtn" style="margin-top:12px">儲存設定</button>
+    <button class="btn" id="connBtn" style="width:100%;margin-top:12px;font-size:16px;padding:12px">連線設定（網址／密碼）</button>
+  </div>
+</div>
+
+<script>
+var toastTimer=null;
+function toast(m){
+  var t=document.getElementById('toast');
+  t.textContent=m;t.style.display='block';
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.style.display='none';},2500);
+}
+var modalCb=null;
+function ask(msg,cb){
+  setText('modalMsg',msg);
+  modalCb=cb;document.getElementById('modal').style.display='flex';
+}
+function showErr(m){
+  toast('錯誤：'+m);
+  var b=document.getElementById('errbar');
+  if(b){b.style.display='block';b.textContent='錯誤：'+m;}
+}
+window.onerror=function(msg,src,line){showErr(msg+' (行'+line+')');};
+
+var S = {settings:{names:['爸','媽','姊夫','阿和'],base:100,tai:20},records:[],history:[]};
+var F = {};
+
+function resetForm(){
+  F = {winner:null,winProxy:false,method:null,loser:null,loseProxy:false,tai:1,
+       taiArr:[1,1,1,1],proxyArr:[false,false,false,false]};
+}
+resetForm();
+
+function $(id){return document.getElementById(id);}
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function money(n){return (n>0?'+':'')+n;}
+function cls(n){return n>0?'pos':(n<0?'neg':'');}
+function fmtDate(ms){var d=new Date(ms);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();}
+function fmtTime(ms){var d=new Date(ms);return fmtDate(ms)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+
+function showTab(i){
+  for(var k=0;k<3;k++){
+    $('page'+k).className='page'+(k===i?' on':'');
+    $('tab'+k).className=(k===i?'on':'');
+  }
+}
+
+/* ---------- 連線 / 本機儲存 ---------- */
+var CFG=window.APP_CONFIG||{};
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function setText(id,t){var e=document.getElementById(id);if(e)e.textContent=t;}
+function uid(){return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function apiUrl(){return lsGet('mj_url')||CFG.API_URL||'';}
+function apiKey(){return lsGet('mj_key')||'';}
+
+// 對 Apps Script 發出請求。錯誤分類：config 沒設網址／auth 密碼錯／net 連不上或回應異常／server 伺服器程式出錯
+async function request(action,args){
+  var url=apiUrl();
+  if(!url) throw {type:'config',message:'尚未設定網址'};
+  var ctrl=new AbortController();
+  var to=setTimeout(function(){ctrl.abort();},30000);
+  var text;
+  try{
+    var res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({key:apiKey(),action:action,args:args||[]}),signal:ctrl.signal});
+    text=await res.text();
+  }catch(e){
+    throw {type:'net',message:'連不上伺服器'};
+  }finally{clearTimeout(to);}
+  var j;
+  try{j=JSON.parse(text);}catch(e){
+    throw {type:'net',message:'伺服器回應異常，請確認 Apps Script 已部署為「所有人」可存取'};
+  }
+  if(!j.ok){
+    throw {type:(j.code==='auth'?'auth':'server'),message:j.error||'伺服器錯誤'};
+  }
+  return j.data;
+}
+
+var ver=0, flushing=false, failCount=0, retryTimer=null, dropped=false;
+var outbox=[];
+try{outbox=JSON.parse(lsGet('mj_outbox')||'[]');}catch(e){outbox=[];}
+function saveOutbox(){lsSet('mj_outbox',JSON.stringify(outbox));}
+function updateSync(){
+  var t='已同步';
+  if(flushing&&outbox.length) t='同步中…';
+  else if(outbox.length) t=(navigator.onLine===false?'離線・':'')+'待上傳 '+outbox.length+' 筆';
+  setText('sync',t);
+}
+function persist(){lsSet('mj_state',JSON.stringify(S));}
+function loadCache(){
+  try{
+    var c=JSON.parse(lsGet('mj_state')||'null');
+    if(c&&c.settings&&c.records&&c.history)S=c;
+  }catch(e){}
+}
+
+// 畫面先更新，資料放進待上傳佇列，連得上就依序寫入試算表
+function bg(fn,args){
+  outbox.push({fn:fn,args:args}); saveOutbox();
+  ver++; updateSync(); flush();
+}
+async function flush(){
+  if(flushing||!outbox.length)return;
+  flushing=true; updateSync();
+  try{
+    while(outbox.length){
+      var op=outbox[0];
+      try{
+        await request(op.fn,op.args);
+        outbox.shift(); saveOutbox(); failCount=0; updateSync();
+      }catch(e){
+        if(e.type==='net'){
+          failCount++;
+          if(failCount===2) toast(e.message+'。資料先存在手機，連線後會自動上傳');
+          clearTimeout(retryTimer); retryTimer=setTimeout(flush,8000);
+          return;
+        }
+        if(e.type==='auth'||e.type==='config'){
+          showLock(e.type==='auth'?'密碼不正確，請重新輸入':'請先設定網址'); return;
+        }
+        outbox.shift(); saveOutbox(); dropped=true;
+        showErr('同步失敗：'+e.message);
+      }
+    }
+  }finally{
+    flushing=false; updateSync();
+    if(!outbox.length&&dropped){dropped=false;reload();}
+  }
+}
+
+function fetchState(apply){
+  if(!apiUrl())return;
+  var v=ver;
+  request('getState',[]).then(function(st){
+    if(outbox.length||flushing||v!==ver)return; // 期間有本機操作，這份資料已過期
+    apply(st);
+  }).catch(function(e){
+    if(e&&e.type==='auth')showLock('密碼不正確，請重新輸入');
+  });
+}
+function reload(){fetchState(function(st){S=st;fillSettings();renderAll();});}
+setInterval(function(){
+  if(document.hidden)return;
+  fetchState(function(st){
+    if(JSON.stringify(st)===JSON.stringify(S))return;
+    S=st;
+    var ae=document.activeElement;
+    if(ae&&ae.tagName==='INPUT')return; // 正在輸入時先不重畫
+    fillSettings();renderAll();
+  });
+},20000);
+
+/* ---------- 連線設定視窗 ---------- */
+function showLock(msg){
+  $('lockUrl').value=apiUrl();
+  $('lockKey').value=apiKey();
+  setText('lockMsg',msg||'');
+  $('lock').style.display='flex';
+}
+function lockOk(){
+  var u=$('lockUrl').value.trim(), k=$('lockKey').value;
+  if(!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)){setText('lockMsg','網址格式不對，應該是 https://script.google.com/macros/s/…/exec');return;}
+  lsSet('mj_url',u); lsSet('mj_key',k);
+  $('lock').style.display='none';
+  failCount=0; flush(); reload();
+}
+
+/* ---------- 設定 ---------- */
+function fillSettings(){
+  for(var i=0;i<4;i++) $('n'+i).value=S.settings.names[i];
+  $('base').value=S.settings.base;
+  $('taiv').value=S.settings.tai;
+}
+function saveSet(){
+  var names=[];
+  for(var i=0;i<4;i++){names.push($('n'+i).value.trim()||('玩家'+(i+1)));}
+  var b=parseInt($('base').value,10), t=parseInt($('taiv').value,10);
+  if(isNaN(b)||isNaN(t)){toast('底和台請輸入數字');return;}
+  S.settings={names:names,base:b,tai:t};
+  fillSettings(); renderAll();
+  toast('已儲存'); showTab(0);
+  bg('saveSettings',[S.settings]);
+}
+
+/* ---------- 計算 ---------- */
+function calcTotals(){
+  var t=[0,0,0,0], pr=[0,0,0,0];
+  S.records.forEach(function(r){
+    t[r.winner.idx]+=r.win;
+    if(r.winner.proxy) pr[r.winner.idx]+=r.win;
+    r.losers.forEach(function(l){
+      t[l.idx]-=l.amt;
+      if(l.proxy) pr[l.idx]-=l.amt;
+    });
+  });
+  return {t:t,pr:pr};
+}
+function crownIdx(arr){
+  var mx=Math.max.apply(null,arr);
+  return mx>0?arr.indexOf(mx):-1;
+}
+
+/* ---------- 畫面 ---------- */
+function renderAll(){renderSum();renderWin();renderMethod();renderDetail();renderLogs();renderHist();persist();}
+
+function renderSum(){
+  var c=calcTotals(), cr=crownIdx(c.t), h='';
+  for(var i=0;i<4;i++){
+    h+='<div class="p'+(cr===i?' champ':'')+'"><div class="n">'+(cr===i?'👑 ':'')+esc(S.settings.names[i])+'</div>'+
+       '<div class="m '+cls(c.t[i])+'">'+money(c.t[i])+'</div>'+
+       '<div class="pxl">代打 <b class="'+cls(c.pr[i])+'">'+money(c.pr[i])+'</b></div></div>';
+  }
+  $('sum').innerHTML=h;
+  setText('rate','底 '+S.settings.base+' / 台 '+S.settings.tai);
+}
+function renderWin(){
+  var h='';
+  for(var i=0;i<4;i++){
+    h+='<button class="btn'+(F.winner===i?' on':'')+'" data-winner="'+i+'">'+esc(S.settings.names[i])+'</button>';
+  }
+  $('winBtns').innerHTML=h;
+  $('winProxy').checked=F.winProxy;
+}
+function renderMethod(){
+  $('m_gun').className='btn'+(F.method==='gun'?' on':'');
+  $('m_zimo').className='btn'+(F.method==='zimo'?' on':'');
+}
+function renderDetail(){
+  var box=$('detail');
+  if(!F.method){box.style.display='none';return;}
+  box.style.display='block';
+  if(F.winner===null){box.innerHTML='<div class="hintmsg">請先在上面選擇贏家</div>';return;}
+  var h='',i;
+  if(F.method==='gun'){
+    h+='<div class="ttl">選擇「放槍者 (輸家)」:</div><div class="btns3">';
+    for(i=0;i<4;i++){
+      if(i===F.winner)continue;
+      h+='<button class="btn'+(F.loser===i?' on':'')+'" data-loser="'+i+'">'+esc(S.settings.names[i])+'</button>';
+    }
+    h+='</div><label class="chkpill"><input type="checkbox" data-loseproxy="1"'+(F.loseProxy?' checked':'')+'> 放槍者是「代打」</label>';
+    h+='<div class="ttl" style="margin-top:14px">輸入「台數」:</div>'+
+       '<label class="taibox wide"><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" data-tai="gun" value="'+F.tai+'">'+
+       '<span class="u">台</span><span class="hint">點擊修改</span></label>';
+  }else{
+    h+='<div class="ttl">個別輸入其他三位輸家輸了幾台：</div><div class="lgrid">';
+    for(i=0;i<4;i++){
+      if(i===F.winner)continue;
+      h+='<div class="lcard"><div class="nm">'+esc(S.settings.names[i])+'</div>'+
+         '<label class="taibox"><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" data-tai="'+i+'" value="'+F.taiArr[i]+'"><span class="u">台</span></label>'+
+         '<label class="pk"><input type="checkbox" data-proxy="'+i+'"'+(F.proxyArr[i]?' checked':'')+'> 代打</label></div>';
+    }
+    h+='</div>';
+  }
+  box.innerHTML=h;
+}
+function nameTag(idx,proxy){
+  return esc(S.settings.names[idx])+(proxy?'<sup class="tag">✱</sup>':'');
+}
+function renderLogs(){
+  var el=$('logs');
+  setText('logCnt','共 '+S.records.length+' 把');
+  if(!S.records.length){el.innerHTML='<div class="empty">還沒有戰績，開打吧！</div>';return;}
+  var h='';
+  for(var k=S.records.length-1;k>=0;k--){
+    var r=S.records[k], txt;
+    txt='【第'+(k+1)+'把】 <span class="w">'+nameTag(r.winner.idx,r.winner.proxy)+'</span> ';
+    if(r.method==='zimo'){
+      txt+='自摸 <b class="pos">(贏 '+money(r.win)+')</b>：(';
+      txt+=r.losers.map(function(l){return '<span class="l">'+nameTag(l.idx,l.proxy)+'</span>輸'+l.tai+'台(計'+l.amt+')';}).join('、');
+      txt+=')';
+    }else{
+      var l=r.losers[0];
+      txt+='胡 <span class="l">'+nameTag(l.idx,l.proxy)+'</span> 放槍 '+l.tai+'台 <b class="pos">(贏 '+money(r.win)+')</b>';
+    }
+    h+='<div class="log"><div class="txt">'+txt+'</div>'+
+       '<div class="acts"><button data-del="'+esc(r.id)+'" data-n="'+(k+1)+'">刪</button>'+
+       '<button class="ed" data-edit="'+esc(r.id)+'">改</button></div></div>';
+  }
+  el.innerHTML=h;
+}
+function renderHist(){
+  var el=$('hist');
+  if(!S.history.length){el.innerHTML='<div class="empty">還沒有歷史戰績</div>';return;}
+  var h='';
+  S.history.forEach(function(x){
+    var cr=crownIdx(x.totals);
+    h+='<div class="card hist"><div class="d">'+fmtDate(x.time)+'　<span style="font-size:13px;color:#999">共'+x.count+'把</span></div><div class="sum">';
+    for(var i=0;i<4;i++){
+      h+='<div class="p'+(cr===i?' champ':'')+'"><div class="n">'+(cr===i?'👑 ':'')+esc(x.names[i])+'</div>'+
+         '<div class="m '+cls(x.totals[i])+'">'+money(x.totals[i])+'</div></div>';
+    }
+    h+='</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+/* ---------- 動作 ---------- */
+function submitRec(){
+  if(F.winner===null){toast('請先選擇贏家');return;}
+  if(!F.method){toast('請選擇放槍或自摸');return;}
+  var b=S.settings.base,t=S.settings.tai,losers=[],win=0,i,amt;
+  if(F.method==='gun'){
+    if(F.loser===null){toast('請選擇放槍者');return;}
+    amt=b+F.tai*t;
+    losers.push({idx:F.loser,tai:F.tai,amt:amt,proxy:F.loseProxy});
+    win=amt;
+  }else{
+    for(i=0;i<4;i++){
+      if(i===F.winner)continue;
+      amt=b+F.taiArr[i]*t;
+      losers.push({idx:i,tai:F.taiArr[i],amt:amt,proxy:F.proxyArr[i]});
+      win+=amt;
+    }
+  }
+  var rec={winner:{idx:F.winner,proxy:F.winProxy},method:F.method,losers:losers,win:win,rate:{base:b,tai:t}};
+  rec.id=uid(); rec.time=Date.now();
+  S.records.push(rec);
+  resetForm(); renderAll();
+  toast('已記錄'); window.scrollTo(0,0);
+  bg('addRecord',[rec]);
+}
+function delRec(id,n){
+  ask('確定要刪除第'+n+'把的紀錄嗎？',function(){
+    S.records=S.records.filter(function(r){return r.id!==id;});
+    renderAll();
+    bg('deleteRecord',[id]);
+  });
+}
+function endGame(){
+  if(!S.records.length){toast('目前沒有任何紀錄');return;}
+  ask('確定結束此戰？\n總結算會存入「歷史軌跡」，目前紀錄將清空。',function(){
+    var c=calcTotals(), now=Date.now(), cnt=S.records.length;
+    S.history.unshift({time:now,names:S.settings.names.slice(),totals:c.t,count:cnt});
+    S.records=[]; resetForm(); renderAll(); showTab(1);
+    bg('endGame',[c.t,S.settings.names,cnt,now]);
+  });
+}
+
+
+/* ---------- 修改紀錄 ---------- */
+var E=null;
+function openEdit(id){
+  var r=null,n=0;
+  S.records.forEach(function(x,k){if(x.id===id){r=x;n=k+1;}});
+  if(!r)return;
+  E={id:id,n:n,winner:r.winner.idx,winProxy:!!r.winner.proxy,method:r.method,loser:null,loseProxy:false,
+     tai:1,taiArr:[1,1,1,1],proxyArr:[false,false,false,false],rate:r.rate||{base:S.settings.base,tai:S.settings.tai}};
+  r.losers.forEach(function(l){
+    E.taiArr[l.idx]=l.tai; E.proxyArr[l.idx]=!!l.proxy;
+    if(r.method==='gun'){E.loser=l.idx;E.loseProxy=!!l.proxy;E.tai=l.tai;}
+  });
+  renderEdit();
+  $('editModal').style.display='flex';
+}
+function renderEdit(){
+  var h='<h4>修改第'+E.n+'把</h4><div class="sec">贏家</div><div class="btns4">',i;
+  for(i=0;i<4;i++){
+    h+='<button class="btn'+(E.winner===i?' on':'')+'" data-ewin="'+i+'">'+esc(S.settings.names[i])+'</button>';
+  }
+  h+='</div><label class="chkpill"><input type="checkbox" data-ewinproxy="1"'+(E.winProxy?' checked':'')+'> 贏家是「代打」</label>';
+  h+='<div class="sec">贏牌方式</div><div class="btns">'+
+     '<button class="btn'+(E.method==='zimo'?' on':'')+'" data-emethod="zimo">自摸</button>'+
+     '<button class="btn'+(E.method==='gun'?' on':'')+'" data-emethod="gun">放槍</button></div>';
+  h+='<div class="panel">';
+  if(E.method==='gun'){
+    h+='<div class="ttl">放槍者 (輸家)</div><div class="btns3">';
+    for(i=0;i<4;i++){
+      if(i===E.winner)continue;
+      h+='<button class="btn'+(E.loser===i?' on':'')+'" data-eloser="'+i+'">'+esc(S.settings.names[i])+'</button>';
+    }
+    h+='</div><label class="chkpill"><input type="checkbox" data-eloseproxy="1"'+(E.loseProxy?' checked':'')+'> 放槍者是「代打」</label>';
+    h+='<div class="ttl" style="margin-top:12px">台數</div>'+
+       '<label class="taibox wide"><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" data-etai="gun" value="'+E.tai+'">'+
+       '<span class="u">台</span><span class="hint">點擊修改</span></label>';
+  }else{
+    h+='<div class="ttl">其他三位輸了幾台</div><div class="lgrid">';
+    for(i=0;i<4;i++){
+      if(i===E.winner)continue;
+      h+='<div class="lcard"><div class="nm">'+esc(S.settings.names[i])+'</div>'+
+         '<label class="taibox"><input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" data-etai="'+i+'" value="'+E.taiArr[i]+'"><span class="u">台</span></label>'+
+         '<label class="pk"><input type="checkbox" data-eproxy="'+i+'"'+(E.proxyArr[i]?' checked':'')+'> 代打</label></div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  $('editBody').innerHTML=h;
+}
+function saveEdit(){
+  if(!E)return;
+  var b=E.rate.base,t=E.rate.tai,losers=[],win=0,i,amt;
+  if(E.method==='gun'){
+    if(E.loser===null||E.loser===E.winner){toast('請選擇放槍者');return;}
+    amt=b+E.tai*t;
+    losers.push({idx:E.loser,tai:E.tai,amt:amt,proxy:E.loseProxy});
+    win=amt;
+  }else{
+    for(i=0;i<4;i++){
+      if(i===E.winner)continue;
+      amt=b+E.taiArr[i]*t;
+      losers.push({idx:i,tai:E.taiArr[i],amt:amt,proxy:E.proxyArr[i]});
+      win+=amt;
+    }
+  }
+  var found=null;
+  S.records.forEach(function(x){if(x.id===E.id)found=x;});
+  if(!found){toast('這筆紀錄已不存在');$('editModal').style.display='none';E=null;return;}
+  found.winner={idx:E.winner,proxy:E.winProxy};
+  found.method=E.method; found.losers=losers; found.win=win; found.rate=E.rate;
+  $('editModal').style.display='none';
+  E=null;
+  renderAll(); toast('已修改');
+  bg('updateRecord',[found]);
+}
+
+/* ---------- 事件（全部集中在這裡） ---------- */
+document.addEventListener('click',function(e){
+  var el=e.target.closest?e.target.closest('button'):null;
+  if(!el)return;
+  if(el.id==='modalYes'||el.id==='modalNo'){
+    document.getElementById('modal').style.display='none';
+    var cb=modalCb;modalCb=null;
+    if(el.id==='modalYes'&&cb)cb();
+    return;
+  }
+  var d=el.dataset;
+  if(el.id==='connBtn'){showLock('');return;}
+  if(el.id==='lockCancel'){$('lock').style.display='none';return;}
+  if(el.id==='lockOk'){lockOk();return;}
+  if(el.id==='editCancel'){$('editModal').style.display='none';E=null;return;}
+  if(el.id==='editSave'){saveEdit();return;}
+  if(E&&d.ewin!==undefined){E.winner=parseInt(d.ewin,10);if(E.loser===E.winner)E.loser=null;renderEdit();return;}
+  if(E&&d.emethod){E.method=d.emethod;renderEdit();return;}
+  if(E&&d.eloser!==undefined){E.loser=parseInt(d.eloser,10);renderEdit();return;}
+  if(d.edit!==undefined){openEdit(d.edit);return;}
+  if(d.tab!==undefined){showTab(parseInt(d.tab,10));}
+  else if(d.winner!==undefined){
+    F.winner=parseInt(d.winner,10);
+    if(F.loser===F.winner)F.loser=null;
+    renderWin();renderDetail();
+  }
+  else if(d.method){F.method=d.method;renderMethod();renderDetail();}
+  else if(d.loser!==undefined){F.loser=parseInt(d.loser,10);renderDetail();}
+  else if(d.del!==undefined){delRec(d.del,d.n);}
+  else if(el.id==='submitBtn'){submitRec();}
+  else if(el.id==='endBtn'){endGame();}
+  else if(el.id==='saveBtn'){saveSet();}
+});
+document.addEventListener('input',function(e){
+  var el=e.target,d=el.dataset;
+  if(E&&d.etai!==undefined){
+    var nv=parseInt(el.value,10)||0;
+    if(d.etai==='gun')E.tai=nv; else E.taiArr[parseInt(d.etai,10)]=nv;
+    return;
+  }
+  if(d.tai==='gun'){F.tai=parseInt(el.value,10)||0;}
+  else if(d.tai!==undefined){F.taiArr[parseInt(d.tai,10)]=parseInt(el.value,10)||0;}
+});
+document.addEventListener('change',function(e){
+  var el=e.target,d=el.dataset;
+  if(E&&d.ewinproxy){E.winProxy=el.checked;}
+  else if(E&&d.eloseproxy){E.loseProxy=el.checked;}
+  else if(E&&d.eproxy!==undefined){E.proxyArr[parseInt(d.eproxy,10)]=el.checked;}
+  else if(el.id==='winProxy'){F.winProxy=el.checked;}
+  else if(d.loseproxy){F.loseProxy=el.checked;}
+  else if(d.proxy!==undefined){F.proxyArr[parseInt(d.proxy,10)]=el.checked;}
+});
+document.addEventListener('focusin',function(e){
+  if(e.target.dataset&&(e.target.dataset.tai!==undefined||e.target.dataset.etai!==undefined)){e.target.select();}
+});
+
+/* ---------- 啟動 ---------- */
+loadCache();
+fillSettings();
+renderAll();
+updateSync();
+if(!apiUrl()){
+  showLock('第一次使用：請貼上 Apps Script 網址');
+}else{
+  flush(); reload();
+}
+window.addEventListener('online',function(){failCount=0;flush();reload();});
+window.addEventListener('offline',updateSync);
+document.addEventListener('visibilitychange',function(){if(!document.hidden){flush();reload();}});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+}
+</script>
+</body>
+</html>
